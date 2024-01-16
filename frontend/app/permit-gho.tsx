@@ -39,7 +39,7 @@ export default function Permit() {
       const body = {
         owner: user,
         spender: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
-        value: parseEther("10000").toString(),
+        value: parseEther("100").toString(),
         deadline: deadline.toString(),
         r,
         s,
@@ -75,7 +75,7 @@ export default function Permit() {
           message: {
             owner: user,
             spender: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
-            value: parseEther("10000"),
+            value: parseEther("100"),
             deadline: newDeadline,
             nonce,
           },
