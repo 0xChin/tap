@@ -1,12 +1,14 @@
 import { erc20ABI } from "@/utils/erc20ABI";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import axios from "axios";
 import { hexToNumber, parseEther, slice } from "viem";
 import { sepolia, useAccount, useContractRead, useSignTypedData } from "wagmi";
+
 
 export default function Permit() {
   const [deadline, setDeadline] = useState(BigInt(0));
   const { address: user } = useAccount();
-
+  
   const { data: nonce } = useContractRead({
     chainId: sepolia.id,
     address: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
@@ -15,27 +17,36 @@ export default function Permit() {
     args: [user as `0x${string}`],
   });
 
+  const sendTransferData = async (body: object) => {
+    try {
+      const response = await axios.post("http://localhost:4000/gho-transfer", body);
+      console.log(response.data); // Handle the response as needed
+    } catch (error) {
+      console.error("Error sending transfer data:", error);
+    }
+  };
+
   const { signTypedData } = useSignTypedData({
     onSuccess(data) {
       const typedData = data as `0x${string}`;
-
+  
       const [r, s, v] = [
         slice(typedData, 0, 32),
         slice(typedData, 32, 64),
         slice(typedData, 64, 65),
       ];
-
+  
       const body = {
         owner: user,
         spender: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
-        value: parseEther("10000"),
-        deadline,
+        value: parseEther("10000").toString(),
+        deadline: deadline.toString(),
         r,
         s,
         v: hexToNumber(v),
       };
-
-      console.log(body)
+  
+      sendTransferData(body); // Send data to the backend
     },
   });
 
