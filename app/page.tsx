@@ -7,7 +7,8 @@ import {
   getDefaultConfig,
 } from "connectkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Permit from "./permit-gho";
+import PermitTransfer from "./permit-gho-transfer";
+import PermitBorrow from "./permit-gho-borrow";
 import { switchNetwork } from "wagmi/actions";
 
 const config = createConfig(
@@ -38,11 +39,16 @@ export default function Home() {
         <QueryClientProvider client={queryClient}>
           <main className="flex min-h-screen flex-col items-center p-24">
             <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-              <ConnectKitButton />
+              <ConnectKitButton showBalance />
             </div>
             {chainId === sepolia.id ? (
               <>
-                <Permit />
+                <div className="mt-5">
+                  <PermitTransfer />
+                </div>
+                <div className="mt-5">
+                  <PermitBorrow />
+                </div>
               </>
             ) : (
               <button

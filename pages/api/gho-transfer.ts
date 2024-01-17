@@ -10,6 +10,8 @@ export default async function handler(
     try {
       const { owner, spender, value, deadline, r, s, v } = req.body;
 
+      console.log(req.body);
+
       const { request: permitRequest } = await publicClient.simulateContract({
         account,
         address: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
