@@ -8,9 +8,11 @@ export default async function handler(
 ) {
   if (req.method === "POST") {
     try {
-      const { owner, spender, value, deadline, r, s, v } = req.body;
+      const { delegatee, value, deadline, r, s, v } = req.body;
 
-      const { request: permitRequest } = await publicClient.simulateContract({
+      console.log(req.body);
+
+      /* const { request: permitRequest } = await publicClient.simulateContract({
         account,
         address: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
         abi: erc20ABI,
@@ -19,6 +21,7 @@ export default async function handler(
       });
 
       let hash = await walletClient.writeContract(permitRequest);
+
       const { request: transferRequest } = await publicClient.simulateContract({
         account,
         address: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
@@ -27,9 +30,9 @@ export default async function handler(
         args: [owner, spender, BigInt(value)],
       });
 
-      hash = await walletClient.writeContract(transferRequest);
+      hash = await walletClient.writeContract(transferRequest); */
 
-      res.status(200).json({ json: { hash } });
+      res.status(200).json({ json: { t: "asdf" } });
     } catch (error) {
       console.log(error);
       res.status(500).json({ error: "Error executing tx" });

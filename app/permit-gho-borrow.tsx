@@ -10,7 +10,7 @@ export default function PermitBorrow() {
 
   const { data: nonce } = useContractRead({
     chainId: sepolia.id,
-    address: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
+    address: "0x67ae46EF043F7A4508BD1d6B94DB6c33F0915844",
     abi: erc20ABI,
     functionName: "nonces",
     args: [user as `0x${string}`],
@@ -18,7 +18,7 @@ export default function PermitBorrow() {
 
   const sendTransferData = async (body: object) => {
     try {
-      const response = await axios.post("/api/gho-transfer", body);
+      const response = await axios.post("/api/gho-borrow", body);
       console.log(response.data); // Handle the response as needed
     } catch (error) {
       console.error("Error sending transfer data:", error);
@@ -36,8 +36,7 @@ export default function PermitBorrow() {
       ];
 
       const body = {
-        owner: user,
-        spender: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
+        delegatee: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
         value: parseEther("1").toString(),
         deadline: deadline.toString(),
         r,
@@ -57,15 +56,14 @@ export default function PermitBorrow() {
         setDeadline(newDeadline);
         signTypedData({
           domain: {
-            name: "Gho Token",
+            name: "Aave Variable Debt Sepolia GHO",
             chainId: 11155111,
-            verifyingContract: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
+            verifyingContract: "0x67ae46EF043F7A4508BD1d6B94DB6c33F0915844",
             version: "1",
           },
           types: {
             Permit: [
-              { name: "owner", type: "address" },
-              { name: "spender", type: "address" },
+              { name: "delegatee", type: "address" },
               { name: "value", type: "uint256" },
               { name: "nonce", type: "uint256" },
               { name: "deadline", type: "uint256" },
@@ -73,8 +71,7 @@ export default function PermitBorrow() {
           },
           primaryType: "Permit",
           message: {
-            owner: user,
-            spender: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
+            delegatee: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
             value: parseEther("1"),
             deadline: newDeadline,
             nonce,
