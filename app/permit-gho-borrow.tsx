@@ -36,6 +36,7 @@ export default function PermitBorrow() {
       ];
 
       const body = {
+        delegator: user,
         delegatee: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
         value: parseEther("1").toString(),
         deadline: deadline.toString(),
@@ -62,14 +63,14 @@ export default function PermitBorrow() {
             version: "1",
           },
           types: {
-            Permit: [
+            DelegationWithSig: [
               { name: "delegatee", type: "address" },
               { name: "value", type: "uint256" },
               { name: "nonce", type: "uint256" },
               { name: "deadline", type: "uint256" },
             ],
           },
-          primaryType: "Permit",
+          primaryType: "DelegationWithSig", 
           message: {
             delegatee: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
             value: parseEther("1"),
