@@ -7,10 +7,10 @@ import {
   getDefaultConfig,
 } from "connectkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import PermitTransfer from "./permit-gho-transfer";
-import PermitBorrow from "./permit-gho-borrow";
 import { switchNetwork } from "wagmi/actions";
 import Image from "next/image";
+import Navbar from "./components/navbar";
+import { useState } from "react";
 
 const config = createConfig(
   getDefaultConfig({
@@ -32,6 +32,34 @@ const queryClient = new QueryClient();
 
 export default function Home() {
   const chainId = useChainId();
+  const [isSending, setIsSending] = useState(true) // Can be sending or receiving, using bool for simplicity
+  
+  const renderActionButtons = () => {
+    if (isSending) {
+      return (
+        <div className="flex flex-col items-center space-y-4 mt-4">
+          <button className="text-yellow-600 border border-yellow-600 hover:text-yellow-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-200">
+            Pay with Link
+          </button>
+          <button className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-200">
+            Scan QR Code
+          </button>
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex flex-col items-center space-y-4 mt-4">
+          <button className="text-green-600 border border-green-600 hover:text-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-200">
+            Create Payment Link
+          </button>
+          <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-200">
+            Generate QR Code
+          </button>
+        </div>
+      );
+    }
+    
+  };
 
   return (
     <WagmiConfig config={config}>
@@ -56,16 +84,7 @@ export default function Home() {
               <h1 className="text-4xl font-bold mb-3">Welcome to Tap</h1>
               <p className="text-lg">Send and receive payments fast and easy</p>
             </section>
-            {chainId === sepolia.id ? (
-              <div className="mt-5 d-flex">
-                <button className="bg-yellow-500 mr-2 hover:bg-yellow-700 text-white font-bold py-2 px-8 rounded focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out">
-                  Send
-                </button>
-                <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-8 rounded focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out">
-                  Receive
-                </button>{" "}
-              </div>
-            ) : (
+            {chainId === sepolia.id ? renderActionButtons() : (
               <button
                 onClick={async () =>
                   await switchNetwork({ chainId: sepolia.id })
@@ -75,6 +94,7 @@ export default function Home() {
                 Switch to Sepolia!!!
               </button>
             )}
+            <Navbar isSending={isSending} setIsSending={setIsSending} />
           </main>
         </QueryClientProvider>
       </ConnectKitProvider>
