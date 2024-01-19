@@ -5,10 +5,12 @@ import { PaperAirplaneIcon, InboxInIcon } from "@heroicons/react/outline";
 interface NavbarProps {
   isSending: boolean;
   setIsSending: (isSending: boolean) => void;
+  setSendMethod: (sendMethod: string) => void;
+  setReceiveMethod: (receiveMethod: string) => void;
 }
 
 // Add the props to the function signature
-export default function Navbar({ isSending, setIsSending }: NavbarProps) {
+export default function Navbar({ isSending, setIsSending, setSendMethod, setReceiveMethod }: NavbarProps) {
   return (
     <div className="fixed inset-x-0 bottom-0 bg-white shadow-md">
       <Popover as="nav" className="flex justify-around p-2">
@@ -17,7 +19,7 @@ export default function Navbar({ isSending, setIsSending }: NavbarProps) {
             {/* Change from 'a' to 'button' and handle onClick */}
             <Popover.Button
               as="button"
-              onClick={() => setIsSending(true)}
+              onClick={() => {setIsSending(true); setSendMethod('')}}
               className="flex flex-col items-center justify-center text-xs"
             >
               <PaperAirplaneIcon
@@ -34,7 +36,7 @@ export default function Navbar({ isSending, setIsSending }: NavbarProps) {
             {/* Change from 'a' to 'button' and handle onClick */}
             <Popover.Button
               as="button"
-              onClick={() => setIsSending(false)}
+              onClick={() => {setIsSending(false); setReceiveMethod('')}}
               className="flex flex-col items-center justify-center text-xs"
             >
               <InboxInIcon

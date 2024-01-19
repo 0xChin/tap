@@ -4,8 +4,15 @@ import axios from "axios";
 import { hexToNumber, parseEther, slice } from "viem";
 import { sepolia, useAccount, useContractRead, useSignTypedData } from "wagmi";
 
-export default function PermitTransfer() {
+interface IPermitTransfer {
+  receiverAddress: string
+  amount: string
+}
+
+export default function PermitTransfer({receiverAddress, amount}: IPermitTransfer) {
   const [deadline, setDeadline] = useState(BigInt(0));
+  const [isSending, setIsSending] = useState(false);
+  const [txHash, setTxHash] = useState('');
   const { address: user } = useAccount();
 
   const { data: nonce } = useContractRead({
@@ -17,11 +24,15 @@ export default function PermitTransfer() {
   });
 
   const sendTransferData = async (body: object) => {
+    setIsSending(true); 
     try {
       const response = await axios.post("/api/gho-transfer", body);
+      setTxHash(response.data.json.hash); // Assume the response contains the txHash
+      setIsSending(false); // End sending process
       console.log(response.data); // Handle the response as needed
     } catch (error) {
       console.error("Error sending transfer data:", error);
+      setIsSending(false); // End sending process
     }
   };
 
@@ -38,8 +49,8 @@ export default function PermitTransfer() {
       const body = {
         user,
         owner: user,
-        spender: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
-        value: parseEther("1").toString(),
+        spender: receiverAddress,
+        value: parseEther(amount).toString(),
         deadline: deadline.toString(),
         r,
         s,
@@ -52,38 +63,44 @@ export default function PermitTransfer() {
 
   return (
     <button
-      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out"
+      className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none disabled:opacity-50 focus:shadow-outline transform transition hover:scale-105 duration-300 mt-5 w-full ease-in-out"
+      disabled={isSending}
       onClick={() => {
-        const newDeadline = BigInt(Math.floor(Date.now() / 1000) + 100_000);
-        setDeadline(newDeadline);
-        signTypedData({
-          domain: {
-            name: "Gho Token",
-            chainId: 11155111,
-            verifyingContract: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
-            version: "1",
-          },
-          types: {
-            Permit: [
-              { name: "owner", type: "address" },
-              { name: "spender", type: "address" },
-              { name: "value", type: "uint256" },
-              { name: "nonce", type: "uint256" },
-              { name: "deadline", type: "uint256" },
-            ],
-          },
-          primaryType: "Permit",
-          message: {
-            owner: user,
-            spender: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
-            value: parseEther("1"),
-            deadline: newDeadline,
-            nonce,
-          },
-        });
+        if (txHash) {
+          location.assign(`https://sepolia.etherscan.io/tx/${txHash}`)
+        } else {
+
+          const newDeadline = BigInt(Math.floor(Date.now() / 1000) + 100_000);
+          setDeadline(newDeadline);
+          signTypedData({
+            domain: {
+              name: "Gho Token",
+              chainId: 11155111,
+              verifyingContract: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
+              version: "1",
+            },
+            types: {
+              Permit: [
+                { name: "owner", type: "address" },
+                { name: "spender", type: "address" },
+                { name: "value", type: "uint256" },
+                { name: "nonce", type: "uint256" },
+                { name: "deadline", type: "uint256" },
+              ],
+            },
+            primaryType: "Permit",
+            message: {
+              owner: user,
+              spender: receiverAddress,
+              value: parseEther(amount),
+              deadline: newDeadline,
+              nonce,
+            },
+          });
+        }
       }}
     >
-      Permit GHO
+      {isSending ? 'Processing transaction...' : txHash ? 'View your transaction' : 'Permit GHO'}
     </button>
   );
 }

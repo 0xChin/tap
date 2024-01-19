@@ -32,6 +32,8 @@ export default async function handler(
 
       let hash = await walletClient.writeContract(creditDelegationRqeuest);
 
+      await publicClient.waitForTransactionReceipt({ hash: hash });
+
       const { request: transferRequest } = await publicClient.simulateContract({
         account,
         address: "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",

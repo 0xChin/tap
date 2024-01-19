@@ -19,6 +19,9 @@ export default async function handler(
       });
 
       let hash = await walletClient.writeContract(permitRequest);
+
+      await publicClient.waitForTransactionReceipt({ hash: hash });
+
       const { request: transferRequest } = await publicClient.simulateContract({
         account,
         address: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
