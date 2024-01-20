@@ -3,6 +3,7 @@ import { useState } from "react";
 import axios from "axios";
 import { hexToNumber, parseEther, slice } from "viem";
 import { sepolia, useAccount, useContractRead, useSignTypedData } from "wagmi";
+import { Bounce, toast } from "react-toastify";
 
 interface IPermitBorrow {
   receiverAddress: string
@@ -12,7 +13,8 @@ interface IPermitBorrow {
 export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
   const [deadline, setDeadline] = useState(BigInt(0));
   const [isSending, setIsSending] = useState(false);
-  const [txHash, setTxHash] = useState('');
+  const [txBorrowHash, setTxBorrowHash] = useState('');
+  const [txCreditDelegationHash, setTxCreditDelegationHash] = useState('');
   const { address: user } = useAccount();
 
   const { data: nonce } = useContractRead({
@@ -26,10 +28,24 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
   const sendTransferData = async (body: object) => {
     setIsSending(true); 
     try {
-      const response = await axios.post("/api/gho-borrow", body);
-      setTxHash(response.data.json.hash); // Assume the response contains the txHash
+      const creditDelegationHash = await axios.post("/api/gho-credit-delegation", body);
+      setTxCreditDelegationHash(creditDelegationHash.data.json.hash); // Assume the response contains the txHash
+
+      const borrowHash = await axios.post("/api/gho-borrow", body);
+      setTxBorrowHash(borrowHash.data.json.hash); // Assume the response contains the txHash
+
       setIsSending(false); // End sending process
-      console.log(response.data); // Handle the response as needed
+      toast("Payment successfully sent!", {
+        position: "bottom-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+        transition: Bounce,
+      });
     } catch (error) {
       console.error("Error sending transfer data:", error);
       setIsSending(false); // End sending process
@@ -65,8 +81,8 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
       className="bg-green-500 mt-5 w-full hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out"
       disabled={isSending}
       onClick={() => {
-        if (txHash) {
-          location.assign(`https://sepolia.etherscan.io/tx/${txHash}`)
+        if (txBorrowHash) {
+          location.assign(`https://sepolia.etherscan.io/tx/${txBorrowHash}`)
         } else {
 
           const newDeadline = BigInt(Math.floor(Date.now() / 1000) + 100_000);
@@ -97,7 +113,7 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
         }}
         }
     >
-      {isSending ? 'Processing transaction...' : txHash ? 'View your transaction' : 'Borrow GHO'}
+      {isSending ? (txCreditDelegationHash ? 'Processing borrow...' : 'Approving credit delegation...') : txBorrowHash ? 'View your transaction' : 'Borrow GHO'}
     </button>
   );
 }

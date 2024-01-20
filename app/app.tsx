@@ -1,10 +1,14 @@
 "use client";
 
+import { formatReserves, formatUserSummary } from "@aave/math-utils";
+import dayjs from "dayjs";
+
 import {
   WagmiConfig,
   createConfig,
   sepolia,
   useAccount,
+  useBalance,
   useChainId,
 } from "wagmi";
 import {
@@ -25,9 +29,19 @@ import "react-toastify/dist/ReactToastify.css";
 import { Dialog, Transition } from "@headlessui/react";
 import PermitTransfer from "./components/permit-gho-transfer";
 import PermitBorrow from "./components/permit-gho-borrow";
+import { Tooltip } from "react-tooltip";
+import { BiSolidHelpCircle } from "react-icons/bi";
+import { ethers } from "ethers";
+import {
+  UiPoolDataProvider,
+  UiIncentiveDataProvider,
+  ChainId,
+} from "@aave/contract-helpers";
+import * as markets from "@bgd-labs/aave-address-book";
 
 export default function App() {
   const chainId = useChainId();
+  const [appOpened, setAppOpened] = useState(false);
   const [isSending, setIsSending] = useState(true); // Can be sending or receiving, using bool for simplicity
   const [sendMethod, setSendMethod] = useState("");
   const [receiveMethod, setReceiveMethod] = useState("");
@@ -37,12 +51,28 @@ export default function App() {
   const { address: user } = useAccount();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [paymentLink, setPaymentLink] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState('wallet'); // 'wallet' or 'borrow'
-
+  const [paymentMethod, setPaymentMethod] = useState("wallet"); // 'wallet' or 'borrow'
+  const ghoBalance = useBalance({
+    token: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
+    address: user,
+    watch: true,
+  });
+  const [maxGhoBorrow, setMaxGhoBorrow] = useState(0);
 
   const pasteFromClipboard = async () => {
     try {
       const text = await navigator.clipboard.readText();
+      toast("Pasted from clipboard!", {
+        position: "bottom-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+        transition: Bounce,
+      });
       setLinkValue(text);
     } catch (error) {
       console.error("Failed to read clipboard contents: ", error);
@@ -71,8 +101,78 @@ export default function App() {
   };
 
   useEffect(() => {
+    async function fetchContractData() {
+      if (user) {
+        const provider = new ethers.providers.JsonRpcProvider(
+          "https://eth-sepolia.g.alchemy.com/v2/2_Fhzc4WRgdlybIVlDRn9akE4dH3I_Lp"
+        );
+
+        const poolDataProviderContract = new UiPoolDataProvider({
+          uiPoolDataProviderAddress:
+            markets.AaveV3Sepolia.UI_POOL_DATA_PROVIDER,
+          provider,
+          chainId: ChainId.sepolia,
+        });
+
+        // Object containing array of pool reserves and market base currency data
+        // { reservesArray, baseCurrencyData }
+        const reserves = await poolDataProviderContract.getReservesHumanized({
+          lendingPoolAddressProvider:
+            markets.AaveV3Sepolia.POOL_ADDRESSES_PROVIDER,
+        });
+
+        // Object containing array or users aave positions and active eMode category
+        // { userReserves, userEmodeCategoryId }
+        const userReserves =
+          await poolDataProviderContract.getUserReservesHumanized({
+            lendingPoolAddressProvider:
+              markets.AaveV3Sepolia.POOL_ADDRESSES_PROVIDER,
+            user: user as `0x${string}`,
+          });
+
+        const reservesArray = reserves.reservesData;
+        const baseCurrencyData = reserves.baseCurrencyData;
+        const userReservesArray = userReserves.userReserves;
+
+        const currentTimestamp = dayjs().unix();
+
+        const formattedPoolReserves = formatReserves({
+          reserves: reservesArray,
+          currentTimestamp,
+          marketReferenceCurrencyDecimals:
+            baseCurrencyData.marketReferenceCurrencyDecimals,
+          marketReferencePriceInUsd:
+            baseCurrencyData.marketReferenceCurrencyPriceInUsd,
+        });
+
+        /*
+- @param `currentTimestamp` Current UNIX timestamp in seconds, Math.floor(Date.now() / 1000)
+- @param `marketReferencePriceInUsd` Input from [Fetching Protocol Data](#fetching-protocol-data), `reserves.baseCurrencyData.marketReferencePriceInUsd`
+- @param `marketReferenceCurrencyDecimals` Input from [Fetching Protocol Data](#fetching-protocol-data), `reserves.baseCurrencyData.marketReferenceCurrencyDecimals`
+- @param `userReserves` Input from [Fetching Protocol Data](#fetching-protocol-data), combination of `userReserves.userReserves` and `reserves.reservesArray`
+- @param `userEmodeCategoryId` Input from [Fetching Protocol Data](#fetching-protocol-data), `userReserves.userEmodeCategoryId`
+*/
+        const userSummary = formatUserSummary({
+          currentTimestamp,
+          marketReferencePriceInUsd:
+            baseCurrencyData.marketReferenceCurrencyPriceInUsd,
+          marketReferenceCurrencyDecimals:
+            baseCurrencyData.marketReferenceCurrencyDecimals,
+          userReserves: userReservesArray,
+          formattedReserves: formattedPoolReserves,
+          userEmodeCategoryId: userReserves.userEmodeCategoryId,
+        });
+
+        setMaxGhoBorrow(parseFloat(userSummary.availableBorrowsUSD) * 0.98);
+      }
+    }
     setReceiverAddress(user as `0x${string}`);
+    fetchContractData();
   }, [user]);
+
+  useEffect(() => {
+    console.log(ghoBalance);
+  }, [ghoBalance]);
 
   const backBtn = () => (
     <div className="d-flex">
@@ -165,27 +265,22 @@ export default function App() {
             top: 0,
           }}
           onDecode={(result) => {
-            console.log(result)
-            setLinkValue(result)
-            
+            console.log(result);
+            setLinkValue(result);
           }}
           onError={(error) => console.log(error?.message)}
         />
-        <div className="absolute z-50 bottom-10">
-        {whiteBackBtn()}
-
-        </div>
+        <div className="absolute z-50 bottom-10">{whiteBackBtn()}</div>
       </div>
     );
   };
 
   useEffect(() => {
-    if (sendMethod == 'qr') {
-
-        setSendMethod('link')
-        openDialog()
+    if (sendMethod == "qr") {
+      setSendMethod("link");
+      openDialog();
     }
-  }, [linkValue])
+  }, [linkValue]);
 
   useEffect(() => {
     const generatePaymentLink = () => {
@@ -200,7 +295,6 @@ export default function App() {
   const linkReceive = () => {
     return (
       <div className="flex flex-col items-center space-y-4 mt-4 w-full">
-        <ToastContainer />
         <label className="flex w-full flex-col gap-2">
           <span className="text-sm font-medium text-gray-700">
             Amount (GHO)
@@ -320,6 +414,7 @@ export default function App() {
 
   return (
     <main className="flex min-h-screen flex-col items-center pt-6 p-12 bg-gray-50">
+      <ToastContainer />
       <Transition appear show={isDialogOpen} as={Fragment}>
         <Dialog
           as="div"
@@ -356,7 +451,7 @@ export default function App() {
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <div className="inline-block align-bottom bg-white rounded-lg px-6 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
                 <div>
                   <div className="mt-3 sm:mt-5">
                     <Dialog.Title
@@ -378,69 +473,139 @@ export default function App() {
                   </div>
                 </div>
                 <div className="mt-4">
-        <div className="text-md font-small text-gray-900 mb-4">Payment Method</div>
-        <div className="flex items-center">
-          <input
-            id="wallet"
-            name="paymentMethod"
-            type="radio"
-            checked={paymentMethod === 'wallet'}
-            onChange={() => setPaymentMethod('wallet')}
-            className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
-          />
-          <label htmlFor="wallet" className="ml-3 block text-sm font-medium text-gray-700">
-            Pay with Wallet
-          </label>
-        </div>
-        <div className="flex items-center mt-2">
-          <input
-            id="borrow"
-            name="paymentMethod"
-            type="radio"
-            checked={paymentMethod === 'borrow'}
-            onChange={() => setPaymentMethod('borrow')}
-            className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
-          />
-          <label htmlFor="borrow" className="ml-3 block text-sm font-medium text-gray-700">
-            Borrow GHO
-          </label>
-        </div>
-        <div className="flex justify-end mt-4">
-          {/* ... (Pay or Borrow buttons based on paymentMethod) */}
-          {paymentMethod === 'wallet' ? (
-            <PermitTransfer receiverAddress={receiverAddress} amount={amount} />
-          ) : (
-            <PermitBorrow receiverAddress={receiverAddress} amount={amount} />
-          )}
-        </div>
-      </div>
+                  <div className="text-md font-small text-gray-900 mb-4">
+                    Payment Method
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      id="wallet"
+                      name="paymentMethod"
+                      type="radio"
+                      disabled={
+                        Number(amount) > Number(ghoBalance.data?.formatted)
+                      }
+                      checked={paymentMethod === "wallet"}
+                      onChange={() => setPaymentMethod("wallet")}
+                      className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+                    />
+                    <label
+                      htmlFor="wallet"
+                      className="ml-3 block text-sm font-medium text-gray-700"
+                    >
+                      Pay with Wallet Tokens
+                    </label>
+                  </div>
+                  <div className="text-xs text-gray-500 ml-8">
+                    Available: {ghoBalance.data?.formatted} GHO
+                  </div>
+                  <div className="flex items-center mt-4">
+                    <input
+                      id="borrow"
+                      name="paymentMethod"
+                      type="radio"
+                      disabled={Number(amount) > maxGhoBorrow}
+                      checked={paymentMethod === "borrow"}
+                      onChange={() => setPaymentMethod("borrow")}
+                      className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+                    />
+                    <label
+                      htmlFor="borrow"
+                      className="ml-3 block text-sm font-medium text-gray-700"
+                    >
+                      Borrow GHO
+                    </label>
+                    <a
+                      className="bg-gray-50 ml-2 rounded-circle rounded-full"
+                      data-tooltip-id="my-tooltip"
+                      data-tooltip-content="Use your AAVE supplied assets & borrow GHO"
+                    >
+                      <BiSolidHelpCircle />
+                    </a>
+                    <Tooltip id="my-tooltip" />
+                  </div>
+
+                  <div className="text-xs text-gray-500 ml-8">
+                    Available: {maxGhoBorrow.toFixed(2)} GHO
+                  </div>
+     
+                  {(Number(amount) > Number(ghoBalance.data?.formatted) &&
+                    Number(amount) > maxGhoBorrow) ? (
+                      <div className="flex justify-end mt-4">
+                        <button className="bg-red-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none disabled:opacity-50 focus:shadow-outline transform transition hover:scale-105 duration-300 mt-5 w-full ease-in-out opacity-50">
+                          Insufficient funds
+                        </button>
+                      </div>
+                    ) :  (
+                      <div className="flex justify-end mt-4">
+                        {/* ... (Pay or Borrow buttons based on paymentMethod) */}
+                        {Number(amount) <= Number(ghoBalance.data?.formatted) &&
+                        Number(amount) <= maxGhoBorrow &&
+                        paymentMethod === "wallet" ? (
+                          <PermitTransfer
+                            receiverAddress={receiverAddress}
+                            amount={amount}
+                          />
+                        ) : (
+                          <PermitBorrow
+                            receiverAddress={receiverAddress}
+                            amount={amount}
+                          />
+                        )}
+                      </div>
+                    )}
+                </div>
               </div>
             </Transition.Child>
           </div>
         </Dialog>
       </Transition>
-
       <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
         <ConnectKitButton showBalance />
       </div>
-
       {/* Landing Page Section */}
-      <section className="text-center mt-12 mb-12">
-        <div className="mb-6 d-flex">
-          <Image
-            className="m-auto"
-            src="/android-chrome-192x192.png"
-            alt="Tap Icon"
-            width={120}
-            height={120}
-          />
-        </div>
-        <h1 className="text-4xl font-bold mb-3">Welcome to Tap</h1>
-        <p className="text-lg">Send and receive payments fast and easy</p>
-      </section>
-      {chainId === sepolia.id ? (
-        renderActions()
-      ) : (
+      {!appOpened && (
+        <section className="text-center mt-12 mb-12">
+          <div className="mb-6 d-flex">
+            <Image
+              className="m-auto"
+              src="/android-chrome-192x192.png"
+              alt="Tap Icon"
+              width={120}
+              height={120}
+            />
+          </div>
+          <h1 className="text-4xl font-bold mb-3">Welcome to Tap</h1>
+          <p className="text-lg">
+            Send and receive payments fast and easy with GHO 👻
+          </p>
+          <button
+            onClick={() => {
+              setAppOpened(true);
+              setIsSending(true);
+            }}
+            className="mt-5 mr-3 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Send
+          </button>
+          <button
+            onClick={() => {
+              setAppOpened(true);
+              setIsSending(false);
+            }}
+            className="mt-5 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Receive
+          </button>
+        </section>
+      )}
+      {chainId === sepolia.id && appOpened && <div className="mt-12 mb-5 w-full">
+      <h1 className="text-2xl font-bold mb-3">Balances</h1>
+      
+      <p>GHO balance: {ghoBalance.data?.formatted}</p>
+      <p>Max borrowable GHO: {maxGhoBorrow.toFixed(0)}</p>
+        </div>}
+      {chainId === sepolia.id && appOpened && renderActions()}
+      {chainId !== sepolia.id && (
         <button
           onClick={async () => await switchNetwork({ chainId: sepolia.id })}
           className="mt-5 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
@@ -448,12 +613,14 @@ export default function App() {
           Switch to Sepolia!!!
         </button>
       )}
-      <Navbar
-        isSending={isSending}
-        setIsSending={setIsSending}
-        setSendMethod={setSendMethod}
-        setReceiveMethod={setReceiveMethod}
-      />
+      {appOpened && (
+        <Navbar
+          isSending={isSending}
+          setIsSending={setIsSending}
+          setSendMethod={setSendMethod}
+          setReceiveMethod={setReceiveMethod}
+        />
+      )}
     </main>
   );
 }

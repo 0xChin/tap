@@ -11,21 +11,28 @@ export default async function handler(
     try {
       const { delegator, delegatee, value, deadline, r, s, v } = req.body;
 
-      const { request: transferRequest } = await publicClient.simulateContract({
-        account,
-        address: "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
-        abi: poolABI,
-        functionName: "borrow",
-        args: [
-          "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
-          value,
-          2,
-          0,
-          delegator,
-        ],
-      });
+      console.log(req.body);
 
-      const hash = await walletClient.writeContract(transferRequest);
+      const { request: creditDelegationRqeuest } =
+        await publicClient.simulateContract({
+          account,
+          address: "0x67ae46EF043F7A4508BD1d6B94DB6c33F0915844",
+          abi: ghoDebtTokenABI,
+          functionName: "delegationWithSig",
+          args: [
+            delegator,
+            delegatee,
+            BigInt(value),
+            BigInt(deadline),
+            v,
+            r,
+            s,
+          ],
+        });
+
+      const hash = await walletClient.writeContract(creditDelegationRqeuest);
+
+      await publicClient.waitForTransactionReceipt({ hash: hash });
 
       res.status(200).json({ json: { hash } });
     } catch (error) {

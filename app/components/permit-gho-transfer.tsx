@@ -3,6 +3,7 @@ import { useState } from "react";
 import axios from "axios";
 import { hexToNumber, parseEther, slice } from "viem";
 import { sepolia, useAccount, useContractRead, useSignTypedData } from "wagmi";
+import { Bounce, toast } from "react-toastify";
 
 interface IPermitTransfer {
   receiverAddress: string
@@ -12,7 +13,8 @@ interface IPermitTransfer {
 export default function PermitTransfer({receiverAddress, amount}: IPermitTransfer) {
   const [deadline, setDeadline] = useState(BigInt(0));
   const [isSending, setIsSending] = useState(false);
-  const [txHash, setTxHash] = useState('');
+  const [txPermitHash, setTxPermitHash] = useState('');
+  const [txTransferHash, setTxTransferHash] = useState('');
   const { address: user } = useAccount();
 
   const { data: nonce } = useContractRead({
@@ -26,10 +28,24 @@ export default function PermitTransfer({receiverAddress, amount}: IPermitTransfe
   const sendTransferData = async (body: object) => {
     setIsSending(true); 
     try {
-      const response = await axios.post("/api/gho-transfer", body);
-      setTxHash(response.data.json.hash); // Assume the response contains the txHash
+      const permitHash = await axios.post("/api/gho-permit", body);
+      setTxPermitHash(permitHash.data.json.hash); // Assume the response contains the txHash
+
+      const transferHash = await axios.post("/api/gho-transfer", body);
+      setTxTransferHash(transferHash.data.json.hash)
+      
       setIsSending(false); // End sending process
-      console.log(response.data); // Handle the response as needed
+      toast("Payment successfully sent!", {
+        position: "bottom-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+        transition: Bounce,
+      });
     } catch (error) {
       console.error("Error sending transfer data:", error);
       setIsSending(false); // End sending process
@@ -66,8 +82,8 @@ export default function PermitTransfer({receiverAddress, amount}: IPermitTransfe
       className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none disabled:opacity-50 focus:shadow-outline transform transition hover:scale-105 duration-300 mt-5 w-full ease-in-out"
       disabled={isSending}
       onClick={() => {
-        if (txHash) {
-          location.assign(`https://sepolia.etherscan.io/tx/${txHash}`)
+        if (txTransferHash) {
+          location.assign(`https://sepolia.etherscan.io/tx/${txTransferHash}`)
         } else {
 
           const newDeadline = BigInt(Math.floor(Date.now() / 1000) + 100_000);
@@ -100,7 +116,7 @@ export default function PermitTransfer({receiverAddress, amount}: IPermitTransfe
         }
       }}
     >
-      {isSending ? 'Processing transaction...' : txHash ? 'View your transaction' : 'Permit GHO'}
+      {isSending ?  (txPermitHash ? 'Processing transfer...' : 'Approving tokens...') : txTransferHash ? 'View your transaction' : 'Transfer GHO'}
     </button>
   );
 }
