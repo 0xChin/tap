@@ -14,6 +14,7 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
   const [deadline, setDeadline] = useState(BigInt(0));
   const [isSending, setIsSending] = useState(false);
   const [txBorrowHash, setTxBorrowHash] = useState('');
+  const [txTransferHash, setTxTransferHash] = useState('');
   const [txCreditDelegationHash, setTxCreditDelegationHash] = useState('');
   const { address: user } = useAccount();
 
@@ -32,6 +33,8 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
     ),
   });
 
+  
+
   const sendTransferData = async (body: object) => {
     setIsSending(true); 
     try {
@@ -40,7 +43,12 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
       setTxCreditDelegationHash(creditDelegationHash.data.json.hash); // Assume the response contains the txHash
 
       const borrowHash = await axios.post("/api/gho-borrow", body);
+      await publicClient.waitForTransactionReceipt({ hash: borrowHash.data.json.hash });
       setTxBorrowHash(borrowHash.data.json.hash); // Assume the response contains the txHash
+
+      const transferHash = await axios.post("/api/gho-borrow", {to: receiverAddress, value: amount});
+      await publicClient.waitForTransactionReceipt({ hash: transferHash.data.json.hash });
+      setTxTransferHash(borrowHash.data.json.hash); // Assume the response contains the txHash
 
       setIsSending(false); // End sending process
       toast("Payment successfully sent!", {
@@ -89,8 +97,8 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
       className="bg-green-500 mt-5 w-full hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out"
       disabled={isSending}
       onClick={() => {
-        if (txBorrowHash) {
-          location.assign(`https://sepolia.etherscan.io/tx/${txBorrowHash}`)
+        if (txTransferHash) {
+          location.assign(`https://sepolia.etherscan.io/tx/${txTransferHash}`)
         } else {
 
           const newDeadline = BigInt(Math.floor(Date.now() / 1000) + 100_000);
@@ -121,7 +129,7 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
         }}
         }
     >
-      {isSending ? (txCreditDelegationHash ? 'Processing borrow...' : 'Approving credit delegation...') : txBorrowHash ? 'View your transaction' : 'Borrow GHO'}
+      {isSending ? (txCreditDelegationHash ? 'Processing borrow...' : 'Approving credit delegation...') : txTransferHash ? 'View your transaction' : 'Borrow GHO'}
     </button>
   );
 }
