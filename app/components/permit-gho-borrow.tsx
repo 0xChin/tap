@@ -46,9 +46,9 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
       await publicClient.waitForTransactionReceipt({ hash: borrowHash.data.json.hash });
       setTxBorrowHash(borrowHash.data.json.hash); // Assume the response contains the txHash
 
-      const transferHash = await axios.post("/api/gho-borrow", {to: receiverAddress, value: amount});
+      const transferHash = await axios.post("/api/gho-transfer-2", {to: receiverAddress, value: parseInt(amount)});
       await publicClient.waitForTransactionReceipt({ hash: transferHash.data.json.hash });
-      setTxTransferHash(borrowHash.data.json.hash); // Assume the response contains the txHash
+      setTxTransferHash(transferHash.data.json.hash); // Assume the response contains the txHash
 
       setIsSending(false); // End sending process
       toast("Payment successfully sent!", {
