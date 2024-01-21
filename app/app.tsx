@@ -798,7 +798,7 @@ interface CurrenciesData {
         <div className="mt-12 mb-5 w-full container">
           <h1 className="text-2xl font-bold mb-3">Balances</h1>
 
-          <p>GHO balance: {ghoBalance.data?.formatted}</p>
+          <p>GHO balance: {Number(ghoBalance.data?.formatted).toFixed(2)}</p>
           <p>Max borrowable GHO: {maxGhoBorrow.toFixed(0)}</p>
         </div>
       )}
