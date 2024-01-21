@@ -206,7 +206,7 @@ interface CurrenciesData {
     console.log(firstBalanceChangeCheck)
     console.log(Number(ghoBalance.data?.formatted))
     console.log(prevGhoBalance)
-    if (prevGhoBalance < Number(ghoBalance.data?.formatted && firstBalanceChangeCheck)) {
+    if (prevGhoBalance < Number(ghoBalance.data?.formatted) && firstBalanceChangeCheck) {
       toast(`You've received a payment of ${(Number(ghoBalance.data?.formatted) - prevGhoBalance).toFixed(2)} GHO tokens!`,  {
         position: "bottom-right",
         autoClose: 5000,
