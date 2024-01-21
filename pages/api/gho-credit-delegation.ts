@@ -32,8 +32,6 @@ export default async function handler(
 
       const hash = await walletClient.writeContract(creditDelegationRqeuest);
 
-      await publicClient.waitForTransactionReceipt({ hash: hash });
-
       res.status(200).json({ json: { hash } });
     } catch (error) {
       console.log(error);

@@ -53,6 +53,7 @@ export default function App() {
   const [currencyAmount, setCurrencyAmount] = useState("");
   const [receiverAddress, setReceiverAddress] = useState("");
   const { address: user } = useAccount();
+  const [firstBalanceChangeCheck, setFirstBalanceChangeCheck] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDialogCurrencyOpen, setIsDialogCurrencyOpen] = useState(false);
   const [paymentLink, setPaymentLink] = useState("");
@@ -62,6 +63,7 @@ export default function App() {
     address: user,
     watch: true,
   });
+  const [prevGhoBalance, setPrevGhobalance] = useState(0)
   const [maxGhoBorrow, setMaxGhoBorrow] = useState(0);
   const [currenciesData, setCurrenciesData] = useState({} as CurrenciesData)
   const [selectedCurrency, setSelectedCurrency] = useState('AAVE' as 'AAVE' | 'ARS' | 'ETH' | 'BTC' | 'EUR')
@@ -200,7 +202,25 @@ interface CurrenciesData {
   }, [user]);
 
   useEffect(() => {
-    console.log(ghoBalance);
+    console.log('running now!')
+    console.log(firstBalanceChangeCheck)
+    console.log(Number(ghoBalance.data?.formatted))
+    console.log(prevGhoBalance)
+    if (prevGhoBalance < Number(ghoBalance.data?.formatted && firstBalanceChangeCheck)) {
+      toast(`You've received a payment of ${(Number(ghoBalance.data?.formatted) - prevGhoBalance).toFixed(2)} GHO tokens!`,  {
+        position: "bottom-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+        transition: Bounce,
+      })
+    }
+    setPrevGhobalance(Number(ghoBalance.data?.formatted))
+    setFirstBalanceChangeCheck(true)
   }, [ghoBalance]);
 
   const currencyOptions = ['AAVE', 'ARS', 'BTC', 'ETH', 'EUR']

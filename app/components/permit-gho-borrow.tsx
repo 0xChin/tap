@@ -1,7 +1,7 @@
 import { erc20ABI } from "@/utils/erc20ABI";
 import { useState } from "react";
 import axios from "axios";
-import { hexToNumber, parseEther, slice } from "viem";
+import { createPublicClient, hexToNumber, http, parseEther, slice } from "viem";
 import { sepolia, useAccount, useContractRead, useSignTypedData } from "wagmi";
 import { Bounce, toast } from "react-toastify";
 
@@ -25,10 +25,18 @@ export default function PermitBorrow({receiverAddress, amount}: IPermitBorrow) {
     args: [user as `0x${string}`],
   });
 
+  const publicClient = createPublicClient({
+    chain: sepolia,
+    transport: http(
+      "https://eth-sepolia.g.alchemy.com/v2/2_Fhzc4WRgdlybIVlDRn9akE4dH3I_Lp"
+    ),
+  });
+
   const sendTransferData = async (body: object) => {
     setIsSending(true); 
     try {
       const creditDelegationHash = await axios.post("/api/gho-credit-delegation", body);
+      await publicClient.waitForTransactionReceipt({ hash: creditDelegationHash.data.json.hash });
       setTxCreditDelegationHash(creditDelegationHash.data.json.hash); // Assume the response contains the txHash
 
       const borrowHash = await axios.post("/api/gho-borrow", body);

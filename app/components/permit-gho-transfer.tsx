@@ -1,7 +1,7 @@
 import { erc20ABI } from "@/utils/erc20ABI";
 import { useState } from "react";
 import axios from "axios";
-import { hexToNumber, parseEther, slice } from "viem";
+import { createPublicClient, hexToNumber, http, parseEther, slice } from "viem";
 import { sepolia, useAccount, useContractRead, useSignTypedData } from "wagmi";
 import { Bounce, toast } from "react-toastify";
 
@@ -17,6 +17,14 @@ export default function PermitTransfer({receiverAddress, amount}: IPermitTransfe
   const [txTransferHash, setTxTransferHash] = useState('');
   const { address: user } = useAccount();
 
+  const publicClient = createPublicClient({
+    chain: sepolia,
+    transport: http(
+      "https://eth-sepolia.g.alchemy.com/v2/2_Fhzc4WRgdlybIVlDRn9akE4dH3I_Lp"
+    ),
+  });
+  
+
   const { data: nonce } = useContractRead({
     chainId: sepolia.id,
     address: "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60",
@@ -29,6 +37,7 @@ export default function PermitTransfer({receiverAddress, amount}: IPermitTransfe
     setIsSending(true); 
     try {
       const permitHash = await axios.post("/api/gho-permit", body);
+      await publicClient.waitForTransactionReceipt({ hash: permitHash.data.json.hash });
       setTxPermitHash(permitHash.data.json.hash); // Assume the response contains the txHash
 
       const transferHash = await axios.post("/api/gho-transfer", body);
